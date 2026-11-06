@@ -45,4 +45,5 @@ Source: "..\build\VST3\Release\RabidPhatt.vst3\*"; DestDir: "{app}\RabidPhatt.vs
 Source: "..\LICENSE"; DestDir: "{app}\RabidPhatt.vst3\Contents\Resources\Licenses"; DestName: "RabidPhatt-LICENSE.txt"; Flags: ignoreversion
 Source: "..\external\vst3sdk\LICENSE.txt"; DestDir: "{app}\RabidPhatt.vst3\Contents\Resources\Licenses"; DestName: "VST3-SDK-LICENSE.txt"; Flags: ignoreversion
 Source: "..\external\vst3sdk\vstgui4\LICENSE"; DestDir: "{app}\RabidPhatt.vst3\Contents\Resources\Licenses"; DestName: "VSTGUI-LICENSE.txt"; Flags: ignoreversion
+Source: "..\external\hadronychecore\LICENSE"; DestDir: "{app}\RabidPhatt.vst3\Contents\Resources\Licenses"; DestName: "HadronycheCore-LICENSE.txt"; Flags: ignoreversion
 Source: "NOTICE.txt"; DestDir: "{app}\RabidPhatt.vst3\Contents\Resources\Licenses"; Flags: ignoreversion

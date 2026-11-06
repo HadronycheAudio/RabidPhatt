@@ -6,6 +6,8 @@ RabidPhatt is a monophonic VST® 3 synthesizer for Windows, with 66 sawtooth osc
 
 `docs/signal-path.md` is the behaviour specification. `README.md` covers building and usage.
 
+Code shared with the other Hadronyche plug-ins is in the `HadronycheCore` submodule, at `external/hadronychecore`: the parameters' curves and saved format, `PanelEditor`, `Smoother`, the test host and the build setup. Its `AGENTS.md` has its own rules.
+
 ## Commands
 
 The only supported platform is Windows x64 with Visual Studio 2022 and CMake 3.25 or newer.
@@ -67,8 +69,8 @@ People use this plug-in in real projects. Breaking these rules damages saved pro
 ### Sound and timing
 
 - **There's no latency, and `getLatencySamples` stays at the base class's 0.** This is an instrument, so anything that adds latency, such as oversampling, makes it worse to play.
-- **The oscillators' anti-aliasing must stay in step with their fade.** `OscillatorBank::stepCorrection` reaches 2 samples each side of a wrap, which only works up to a quarter of the sample rate. That's why oscillators fade out by there.
-- **`Smoother` must stay double precision.** In single precision it stalls just short of its target, which would leave a held note out of tune after a glide.
+- **The oscillators' anti-aliasing must stay in step with their fade.** `Hadronyche::stepCorrection` reaches 2 samples each side of a wrap, which only works up to a quarter of the sample rate. That's why oscillators fade out by there.
+- **`Hadronyche::Smoother` must stay double precision.** In single precision it stalls just short of its target, which would leave a held note out of tune after a glide.
 - **While the transport plays, a synced LFO's phase is calculated from the host's musical position.** Don't accumulate it instead, or it will drift off the grid.
 - **Motion's modulation isn't smoothed, and mustn't be.** A smoother slow enough to matter would eat the top of the LFO's range. `Motion` itself is smoothed before the LFO is added.
 
@@ -88,6 +90,7 @@ In `docs/signal-path.md`, **Requirement** marks the owner's decisions and **Prop
 ### The repository
 
 - **Don't edit anything in `external/vst3sdk`.** It's a submodule pinned to `v3.8.1_build_84`. `git submodule status` shows a misleading `v3.7.3...` label for that same commit, so check with `git -C external/vst3sdk describe --tags`.
+- **Don't edit `external/hadronychecore` from here.** Change it in its own repository, and move the submodule here afterwards, once the new version has been compared with the old as its `AGENTS.md` describes.
 - Don't change git configuration. Commit or push only when asked.
 
 ## Architecture
@@ -121,11 +124,10 @@ The processor and controller share no memory, so the plug-in is marked as distri
 
 ### The editor
 
-`Editor.cpp` builds the whole panel in code, with no `.uidesc` file. A 33 ms timer in `syncControls` pushes parameter values to the controls.
+`Editor.cpp` builds the panel in `buildPanel`, on `Hadronyche::PanelEditor`, with no `.uidesc` file. A 33 ms timer in `PanelEditor` pushes parameter values to the controls.
 
 - A control's tag is its `ParamId`.
-- A new `COptionMenu` needs `setCurrent (0)`, or it stays blank at a value of 0.
-- The rate knob and division menu share a column, and `syncControls` shows whichever applies.
+- The rate knob and division menu share a column, and `onSync` shows whichever applies.
 
 ## Verifying a change
 
@@ -175,8 +177,8 @@ CI builds the installer on every push, installs it on its own machine, runs the 
 Rules for releases:
 
 - **Don't change `AppId` in `installer/RabidPhatt.iss`.** It's how an upgrade finds the previous version.
-- **Keep `SMTG_USE_STATIC_CRT` on.** Without it, the plug-in fails to load on PCs without Microsoft's runtime, and neither the tests nor CI would notice, because that runtime is on those machines. If you configured a build before this option existed, its cached value overrides the default.
-- **The installer must keep shipping the licence files.** The VST 3 SDK's and VSTGUI's licences require their notices to accompany binaries.
+- **Keep `SMTG_USE_STATIC_CRT` on,** which HadronycheCore's `cmake/HadronychePlugin.cmake` does. Without it, the plug-in fails to load on PCs without Microsoft's runtime, and neither the tests nor CI would notice, because that runtime is on those machines. If you configured a build before this option existed, its cached value overrides the default.
+- **The installer must keep shipping the licence files.** The VST 3 SDK's, VSTGUI's and HadronycheCore's licences require their notices to accompany binaries.
 - **Follow Steinberg's usage guidelines** (`external/vst3sdk/VST3_Usage_Guidelines.pdf`) wherever "VST" appears in product-related material: use ® on first mention, include the sentence "VST is a registered trademark of Steinberg Media Technologies GmbH.", show the logo from `docs/images/` unaltered, and don't put "VST" in product or company names.
 
 ## Known limits
