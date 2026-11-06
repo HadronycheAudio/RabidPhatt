@@ -25,7 +25,7 @@ set(RABIDPHATT_TESTS
     base-pitch motion-minimum banks-rows motion-spread motion-smooth lfo-modulates lfo-rate lfo-delay lfo-smooth lfo-sync-tempo lfo-sync-divisions lfo-sync-grid lfo-sync-free level-flat stereo-width dc-offset aliasing top-of-keyboard
     last-note-priority legato glide amp-envelope silence-flags sample-accurate
     filter-slope filter-envelope filter-tail volume levels determinism extreme-settings parameter-state parameter-text
-    panel
+    panel panel-opens
 )
 
 hadronyche_add_host_tests(RabidPhattTests RabidPhatt ${RABIDPHATT_TESTS})
