@@ -60,7 +60,7 @@ target_compile_definitions(RabidPhatt PRIVATE
     RABIDPHATT_VERSION="${PROJECT_VERSION}"
     $<$<PLATFORM_ID:Windows>:NOMINMAX>
 )
-target_link_libraries(RabidPhatt PRIVATE sdk vstgui_support hadronyche_dsp hadronyche_vst)
+target_link_libraries(RabidPhatt PRIVATE sdk vstgui_support hadronyche_dsp hadronyche_vst hadronyche_gui)
 
 # --- Tests --------------------------------------------------------------------
 enable_testing()
