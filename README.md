@@ -154,6 +154,10 @@ Copy-Item -Recurse -Force build/VST3/Release/RabidPhatt.vst3 "C:\Program Files\C
 | `installer/` | The Windows installer, and the script that tests it. The macOS installer and the Linux tarball are built by HadronycheCore's `tools/macos/` and `tools/linux/` |
 | `docs/` | The behaviour specification and the original design diagrams |
 
+## Contributing
+
+RabidPhatt is free software that follows its author's own workflow, and there's no company or support promise behind it. If you find it handy and want it to work better with your host, your distribution or your way of working, you're welcome to take it further. Please [open an issue](https://github.com/HadronycheAudio/RabidPhatt/issues/new) or a pull request. An LV2 version is on the way, and help testing in other hosts is especially useful. `AGENTS.md` lists the rules that keep people's saved projects safe, so please read it before changing anything.
+
 ## Licence
 
 RabidPhatt is released under the MIT licence: see `LICENSE`.
