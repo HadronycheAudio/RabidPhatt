@@ -2,6 +2,9 @@
 
 #include "Controller.h"
 
+#include "hadronyche/dsp/Denormals.h"
+#include "hadronyche/dsp/Gain.h"
+
 #include "pluginterfaces/vst/ivstevents.h"
 #include "pluginterfaces/vst/ivstparameterchanges.h"
 #include "pluginterfaces/vst/ivstprocesscontext.h"
@@ -9,10 +12,6 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
-
-#if defined(_M_X64) || defined(__x86_64__)
-#include <xmmintrin.h>
-#endif
 
 using namespace Steinberg;
 
@@ -31,36 +30,12 @@ constexpr float kSilentPeak = 1e-6f;
 // The glide's time is how long it takes to cover 95% of the interval, which is 3 time constants.
 constexpr double kGlideTimeConstants = 3.0;
 
-// Stops very small values in the filters from slowing the CPU down.
-class FlushDenormals
-{
-public:
-#if defined(_M_X64) || defined(__x86_64__)
-    FlushDenormals () : _previous (_mm_getcsr ()) { _mm_setcsr (_previous | 0x8040); }
-    ~FlushDenormals () { _mm_setcsr (_previous); }
-
-private:
-    unsigned int _previous;
-#endif
-};
-
-double volumeToGain (double db)
-{
-    return db <= kVolumeSilenceDb ? 0.0 : std::pow (10.0, db / 20.0);
-}
-
 } // namespace
 
-Processor::Processor ()
+Processor::Processor () : _params (getParamSpec)
 {
     setControllerClass (Controller::getClassFUID ());
     processContextRequirements.needTransportState ().needProjectTimeMusic ().needTempo ();
-
-    for (Vst::ParamID id = 0; id < kParamCount; ++id)
-    {
-        const auto& spec = getParamSpec (id);
-        _params[id] = plainToNormalized (spec, spec.defaultValue);
-    }
 }
 
 tresult PLUGIN_API Processor::initialize (FUnknown* context)
@@ -105,27 +80,7 @@ uint32 PLUGIN_API Processor::getTailSamples ()
 
 double Processor::plain (ParamId id) const
 {
-    return normalizedToPlain (getParamSpec (id), _params[id]);
-}
-
-void Processor::readParameterChanges (Vst::IParameterChanges* changes)
-{
-    if (!changes)
-        return;
-
-    const int32 count = changes->getParameterCount ();
-    for (int32 i = 0; i < count; ++i)
-    {
-        auto* queue = changes->getParameterData (i);
-        if (!queue || queue->getParameterId () >= kParamCount || queue->getPointCount () == 0)
-            continue;
-
-        // Smoothing covers the rest, so only the last value in each block is needed.
-        int32 offset = 0;
-        Vst::ParamValue value = 0.0;
-        if (queue->getPoint (queue->getPointCount () - 1, offset, value) == kResultTrue)
-            _params[queue->getParameterId ()] = value;
-    }
+    return _params.plain (id);
 }
 
 void Processor::applyParameters ()
@@ -138,7 +93,7 @@ void Processor::applyParameters ()
     _cutoffOctaves.setTarget (std::log2 (plain (kFilterCutoff)));
     _resonance.setTarget (plain (kFilterResonance) / 100.0);
     _envAmount.setTarget (plain (kFilterEnvAmount));
-    _volume.setTarget (volumeToGain (plain (kVolume)));
+    _volume.setTarget (Hadronyche::volumeToGain (plain (kVolume)));
 
     _ampEnv.setParameters (plain (kAmpAttack), plain (kAmpDecay), plain (kAmpSustain) / 100.0, plain (kAmpRelease));
     _filterEnv.setParameters (plain (kFilterAttack), plain (kFilterDecay), plain (kFilterSustain) / 100.0, plain (kFilterRelease));
@@ -190,7 +145,7 @@ void Processor::prepareDsp ()
     _cutoffOctaves.snapTo (std::log2 (plain (kFilterCutoff)));
     _resonance.snapTo (plain (kFilterResonance) / 100.0);
     _envAmount.snapTo (plain (kFilterEnvAmount));
-    _volume.snapTo (volumeToGain (plain (kVolume)));
+    _volume.snapTo (Hadronyche::volumeToGain (plain (kVolume)));
 
     _leftBank.prepare (OscillatorBank::Side::Left);
     _rightBank.prepare (OscillatorBank::Side::Right);
@@ -333,7 +288,7 @@ void Processor::updateSleep ()
 
 tresult PLUGIN_API Processor::process (Vst::ProcessData& data)
 {
-    readParameterChanges (data.inputParameterChanges);
+    _params.readChanges (data.inputParameterChanges);
 
     if (data.numOutputs == 0 || data.numSamples == 0)
         return kResultOk;
@@ -346,7 +301,7 @@ tresult PLUGIN_API Processor::process (Vst::ProcessData& data)
         return kResultOk;
     }
 
-    const FlushDenormals flushDenormals;
+    const Hadronyche::FlushDenormals flushDenormals;
     applyParameters ();
     updateLfoTiming (data.processContext);
 
@@ -401,11 +356,7 @@ tresult PLUGIN_API Processor::getState (IBStream* state)
     if (!state)
         return kResultFalse;
 
-    ParamValues values {};
-    for (size_t id = 0; id < kParamCount; ++id)
-        values[id] = _params[id];
-
-    return writeParamState (state, values) ? kResultOk : kResultFalse;
+    return writeParamState (state, _params.snapshot ()) ? kResultOk : kResultFalse;
 }
 
 } // namespace RabidPhatt

@@ -1,11 +1,15 @@
 #pragma once
 
+#include "hadronyche/dsp/BandLimitedStep.h"
+
 #include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 
 namespace RabidPhatt {
+
+using Hadronyche::stepCorrection;
 
 // "Left Oscillator Bank" and "Right Oscillator Bank": 33 sawtooth oscillators and a signal add.
 //
@@ -79,24 +83,6 @@ private:
         0.12, 0.14, 0.16, 0.18, 0.20, 0.22, 0.24, 0.26, 0.28, 0.30, 0.32, 0.34, 0.36, 0.38, 0.40, 0.42,
         -0.12, -0.14, -0.16, -0.18, -0.20, -0.22, -0.24, -0.26, -0.28, -0.30, -0.32, -0.34, -0.36, -0.38, -0.40, -0.42
     };
-
-    // A band-limited step: the integral of a cubic B-spline, minus the ideal step it replaces. x is the
-    // distance from the wrap in samples, and the correction reaches zero 2 samples away.
-    static double stepCorrection (double x)
-    {
-        if (x < -1.0)
-        {
-            const double a = x + 2.0;
-            return a * a * a * a / 24.0;
-        }
-        if (x < 0.0)
-            return 0.5 + x * (2.0 / 3.0 - x * x * (1.0 / 3.0 + x / 8.0));
-        if (x < 1.0)
-            return -0.5 + x * (2.0 / 3.0 - x * x * (1.0 / 3.0 - x / 8.0));
-
-        const double a = 2.0 - x;
-        return -a * a * a * a / 24.0;
-    }
 
     static double saw (double& phase, double increment)
     {

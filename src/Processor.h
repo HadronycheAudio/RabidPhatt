@@ -7,7 +7,9 @@
 #include "dsp/LowPassFilter.h"
 #include "dsp/NoteStack.h"
 #include "dsp/OscillatorBank.h"
-#include "dsp/Smoother.h"
+
+#include "hadronyche/dsp/Smoother.h"
+#include "hadronyche/vst/ParamStore.h"
 
 #include "pluginterfaces/vst/ivstevents.h"
 #include "public.sdk/source/vst/vstaudioeffect.h"
@@ -41,7 +43,6 @@ public:
 
 private:
     double plain (ParamId id) const;
-    void readParameterChanges (Steinberg::Vst::IParameterChanges* changes);
     void applyParameters ();
     void updateLfoTiming (const Steinberg::Vst::ProcessContext* context);
     void followGrid (Steinberg::int32 position);
@@ -54,8 +55,9 @@ private:
     void render (float* left, float* right, Steinberg::int32 count);
     void updateSleep ();
 
-    // Written from the host's threads and read on the audio thread.
-    std::array<std::atomic<double>, kParamCount> _params;
+    using Smoother = Hadronyche::Smoother;
+
+    Hadronyche::ParamStore<kParamCount> _params;
 
     NoteStack _notes;
     bool _hasPlayed { false }; // The first note has nothing to glide from.

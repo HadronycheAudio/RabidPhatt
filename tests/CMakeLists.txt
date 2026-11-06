@@ -18,7 +18,7 @@ add_executable(RabidPhattTests
 
 target_include_directories(RabidPhattTests PRIVATE "${VST3_SDK_DIR}" "${CMAKE_SOURCE_DIR}/src")
 target_compile_definitions(RabidPhattTests PRIVATE UNICODE _UNICODE NOMINMAX)
-target_link_libraries(RabidPhattTests PRIVATE user32 gdi32)
+target_link_libraries(RabidPhattTests PRIVATE hadronyche_params user32 gdi32)
 add_dependencies(RabidPhattTests RabidPhatt)
 
 # One CTest test per test in the program, so that a single one can be run with ctest -R.

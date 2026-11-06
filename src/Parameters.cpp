@@ -1,9 +1,8 @@
 #include "Parameters.h"
 
-#include "base/source/fstreamer.h"
+#include "hadronyche/vst/ParamState.h"
 
 #include <algorithm>
-#include <cmath>
 
 using namespace Steinberg;
 
@@ -44,7 +43,7 @@ const std::array<ParamSpec, kParamCount> kSpecs { {
     { "Filter sustain", "%", 0.0, 100.0, 30.0, Curve::Linear, 0 },
     { "Filter release", "ms", 1.0, 10000.0, 300.0, Curve::Log, 0 },
 
-    { "Volume", "dB", kVolumeSilenceDb, 6.0, 0.0, Curve::Linear, 1 },
+    { "Volume", "dB", kVolumeSilenceDb, 6.0, 0.0, Curve::Linear, 1, nullptr, 0, true },
 
     { "LFO rate", "Hz", 0.05, 20.0, 1.0, Curve::Log, 2 },
     { "LFO amount", "%", 0.0, 100.0, 0.0, Curve::Linear, 0 },
@@ -66,64 +65,15 @@ double getLfoDivisionQuarters (int division)
     return kLfoDivisionQuarters[std::clamp (division, 0, kLfoDivisionCount - 1)];
 }
 
-double normalizedToPlain (const ParamSpec& spec, double normalized)
-{
-    const double n = std::clamp (normalized, 0.0, 1.0);
-    if (spec.curve == Curve::List)
-        return std::round (n * (spec.labelCount - 1));
-    if (spec.curve == Curve::Toggle)
-        return n >= 0.5 ? 1.0 : 0.0;
-    if (spec.curve == Curve::Log)
-        return spec.min * std::pow (spec.max / spec.min, n);
-    if (spec.curve == Curve::Squared)
-        return spec.min + (spec.max - spec.min) * n * n;
-    return spec.min + (spec.max - spec.min) * n;
-}
-
-double plainToNormalized (const ParamSpec& spec, double plain)
-{
-    const double p = std::clamp (plain, spec.min, spec.max);
-    if (spec.curve == Curve::Log)
-        return std::log (p / spec.min) / std::log (spec.max / spec.min);
-    if (spec.curve == Curve::Squared)
-        return std::sqrt ((p - spec.min) / (spec.max - spec.min));
-    return (p - spec.min) / (spec.max - spec.min);
-}
-
 bool writeParamState (IBStream* stream, const ParamValues& normalizedValues)
 {
-    IBStreamer streamer (stream, kLittleEndian);
-    if (!streamer.writeInt32 (kStateVersion) || !streamer.writeInt32 (kParamCount))
-        return false;
-
-    for (int32 id = 0; id < kParamCount; ++id)
-    {
-        if (!streamer.writeInt32 (id) || !streamer.writeDouble (normalizedValues[static_cast<size_t> (id)]))
-            return false;
-    }
-    return true;
+    return Hadronyche::writeParamState (stream, kStateVersion, normalizedValues.data (), kParamCount);
 }
 
 bool readParamState (IBStream* stream, const std::function<void (Vst::ParamID, double)>& onValue)
 {
-    IBStreamer streamer (stream, kLittleEndian);
-
-    int32 version = 0;
-    int32 count = 0;
-    if (!streamer.readInt32 (version) || version < 1 || version > kStateVersion || !streamer.readInt32 (count))
-        return false;
-
-    for (int32 i = 0; i < count; ++i)
-    {
-        int32 id = 0;
-        double value = 0.0;
-        if (!streamer.readInt32 (id) || !streamer.readDouble (value))
-            return false;
-
-        if (id >= 0 && id < kParamCount && std::isfinite (value))
-            onValue (static_cast<Vst::ParamID> (id), std::clamp (value, 0.0, 1.0));
-    }
-    return true;
+    return Hadronyche::readParamState (stream, kStateVersion, kParamCount,
+                                       [&onValue] (Vst::ParamID id, double value, int32) { onValue (id, value); });
 }
 
 } // namespace RabidPhatt
