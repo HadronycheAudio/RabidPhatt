@@ -195,7 +195,8 @@ Rules for releases:
 - **Use one build folder per configuration, with Ninja:** `cmake -S . -B build/Release -G Ninja -DCMAKE_BUILD_TYPE=Release`, then `cmake --build build/Release --target RabidPhattTests RabidPhatt`. The SDK's Linux output paths break with a multi-configuration generator.
 - **`external/hadronychecore/tools/linux/install-build-packages.sh` installs the build's packages.** gtkmm and SQLite are only needed to configure, and the plug-in doesn't link them.
 - **`panel-opens` needs an X server,** so run `xvfb-run -a ctest ...` where there's no display. It opens and closes the real editor, and nothing more: `panel`, which drives it, only exists on Windows, so the panel's look and its controls need checking by eye.
-- **The version built on a machine only loads on a glibc as new as that machine's.** Nothing here checks that yet, and nothing is released for Linux yet.
+- **The release is built in an `ubuntu:22.04` container on CI, not on the runner,** because a binary only loads on a glibc as new as the one it's built against. HadronycheCore's `tools/linux/test-tarball.sh` checks this, and CI runs the tarball on other distributions too.
+- **There's no LV2 version yet.** Linux releases are VST 3 only.
 
 ## Known limits
 
@@ -203,4 +204,5 @@ Rules for releases:
 - There's no limiter. Peaks measured just under full scale with the filter open, but they depend on how the rows' phases line up, and high resonance can go over.
 - The installer isn't code-signed, so Windows warns users when they run it. The macOS one isn't signed by Apple or notarized, so macOS refuses it until the user allows it.
 - The Linux version has only been tried briefly, in REAPER on Debian 13, by the owner.
+- The test that opens the panel crashed once on CI as the test program exited, after all its checks had passed. It happened once in about 33 runs, and about 260 further runs didn't reproduce it. The cause isn't known, and it hasn't been seen in a host.
 - The Mac version hasn't been used in a real host on a real Mac. The tests measure its output, and Apple's `auval` validates it, on CI only.
