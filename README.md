@@ -12,6 +12,21 @@ A monophonic VST® 3 synthesizer, with 66 sawtooth oscillators that a single Mot
 
 **On a Mac,** get `RabidPhatt-<version>-macOS.pkg` from the same page. It's a VST 3 and an Audio Unit, for Intel and Apple Silicon, on macOS 10.15 or later. It installs to `/Library/Audio/Plug-Ins`. The installer isn't signed by Apple, so macOS will refuse it the first time: the release notes explain how to open it. See [macOS: untested](#macos-untested) first.
 
+**On Linux,** get `RabidPhatt-<version>-Linux-x86_64.tar.gz` from the same page. It's a VST 3 for x86_64, and it needs glibc 2.34 or later, as on Ubuntu 22.04, Debian 12 or newer. Extract it where hosts look:
+
+```bash
+mkdir -p ~/.vst3
+tar -xzf RabidPhatt-<version>-Linux-x86_64.tar.gz -C ~/.vst3
+```
+
+It needs a few common libraries, which you probably have. On Debian or Ubuntu:
+
+```bash
+sudo apt install libxcb-cursor0 libxcb-util1 libxkbcommon-x11-0 libcairo2 libpango-1.0-0 libpangocairo-1.0-0
+```
+
+There's no LV2 version yet. See [Linux: lightly tested](#linux-lightly-tested) first.
+
 ## macOS: untested
 
 > [!WARNING]
@@ -35,6 +50,30 @@ To run the tests, which leave out the Windows-only panel test:
 ```bash
 cmake --build build --config Release --target RabidPhattTests
 ctest --test-dir build -C Release --output-on-failure
+```
+
+## Linux: lightly tested
+
+> [!NOTE]
+> **The Linux version is new.** It passes the automated tests on Ubuntu 22.04 and 24.04 and Debian 12 and 13, and it has been tried briefly by hand in REAPER on Debian 13. Other hosts and distributions haven't been tried. Please [open an issue](https://github.com/HadronycheAudio/RabidPhatt/issues/new) saying which distribution and host you use if something goes wrong.
+
+To build it yourself, you need CMake 3.25 or newer, and the packages that this script installs on Debian or Ubuntu:
+
+```bash
+git clone --recurse-submodules https://github.com/HadronycheAudio/RabidPhatt.git
+cd RabidPhatt
+bash external/hadronychecore/tools/linux/install-build-packages.sh
+cmake -S . -B build/Release -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build/Release --target RabidPhatt
+```
+
+This produces `build/Release/VST3/Release/RabidPhatt.vst3`, and runs the Steinberg validator on the plug-in. To use it, copy it to `~/.vst3`.
+
+To run the tests, which include one that opens the panel and so needs a display or `xvfb-run`:
+
+```bash
+cmake --build build/Release --target RabidPhattTests
+xvfb-run -a ctest --test-dir build/Release --output-on-failure
 ```
 
 ## Using it
@@ -112,7 +151,7 @@ Copy-Item -Recurse -Force build/VST3/Release/RabidPhatt.vst3 "C:\Program Files\C
 | `src/Editor.*` | The plug-in window |
 | `src/dsp/` | Oscillator banks, envelopes, LFO, filter, note stack and parameter smoothing |
 | `tests/` | Tests that drive the built plug-in like a host |
-| `installer/` | The Windows installer, and the script that tests it. The macOS installer is built by HadronycheCore's `tools/macos/` |
+| `installer/` | The Windows installer, and the script that tests it. The macOS installer and the Linux tarball are built by HadronycheCore's `tools/macos/` and `tools/linux/` |
 | `docs/` | The behaviour specification and the original design diagrams |
 
 ## Licence
