@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.25)
 
-project(RabidPhatt VERSION 1.0.1 LANGUAGES CXX)
+# The oldest macOS it runs on. This has to come before project (), or it defaults to the build machine's own.
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "The oldest macOS supported")
+
+project(RabidPhatt VERSION 1.1.0 LANGUAGES CXX)
 
 # Can point at another checkout, to work on the library and a plug-in together.
 set(HADRONYCHE_CORE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/hadronychecore" CACHE PATH "The HadronycheCore library")
@@ -14,7 +17,7 @@ include("${HADRONYCHE_CORE_DIR}/cmake/HadronychePlugin.cmake")
 hadronyche_use_vst3_sdk()
 
 # --- Plug-in ------------------------------------------------------------------
-hadronyche_add_plugin(RabidPhatt SOURCES
+hadronyche_add_plugin(RabidPhatt AU_TYPE aumu AU_SUBTYPE RbPh SOURCES
     src/PluginConfig.h
     src/PluginEntry.cpp
     src/Parameters.h
