@@ -9,12 +9,16 @@ add_executable(RabidPhattTests
     CompatibilityTests.cpp
     VoiceTests.cpp
     OscillatorTests.cpp
-    PanelTest.cpp
 )
 
 target_include_directories(RabidPhattTests PRIVATE "${CMAKE_SOURCE_DIR}/src")
 target_link_libraries(RabidPhattTests PRIVATE hadronyche_testhost)
 add_dependencies(RabidPhattTests RabidPhatt)
+
+# It drives a real window with Windows' mouse messages.
+if(WIN32)
+    target_sources(RabidPhattTests PRIVATE PanelTest.cpp)
+endif()
 
 set(RABIDPHATT_TESTS
     class-ids parameter-ids parameter-ranges saved-format buses
