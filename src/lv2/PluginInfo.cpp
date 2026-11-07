@@ -42,7 +42,7 @@ const Hadronyche::Lv2::PluginInfo& Hadronyche::Lv2::getPluginInfo ()
         RabidPhatt::getParamSpec,
         RabidPhatt::kParamCount,
         kSymbols,
-        2, // LV2 treats an odd minor version as a development build.
+        4, // LV2 treats an odd minor version as a development build. 2 was the first release, without a panel.
         0,
         false, // Audio input
         true, // MIDI
