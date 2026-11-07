@@ -36,13 +36,7 @@ hadronyche_add_plugin(RabidPhatt AU_TYPE aumu AU_SUBTYPE RbPh SOURCES
 )
 
 # --- LV2 ----------------------------------------------------------------------
-hadronyche_add_lv2(RabidPhatt SOURCES
-    src/PluginEntry.cpp
-    src/Parameters.cpp
-    src/Processor.cpp
-    src/Controller.cpp
-    src/Editor.cpp
-)
+hadronyche_add_lv2(RabidPhatt)
 
 # --- Tests --------------------------------------------------------------------
 enable_testing()
