@@ -131,7 +131,9 @@ jobs:
           submodules: recursive
 
       - name: Install the build's packages
-        run: bash external/hadronychecore/tools/linux/install-build-packages.sh
+        run: |
+          bash external/hadronychecore/tools/linux/install-build-packages.sh
+          sudo apt-get install -y lv2-dev
 
       # One folder per configuration, because the SDK's Linux output paths assume a single-configuration build.
       - name: Configure
@@ -139,7 +141,7 @@ jobs:
 
       # This also runs the Steinberg validator, and a failure fails the build.
       - name: Build
-        run: cmake --build build --target RabidPhattTests RabidPhatt
+        run: cmake --build build --target RabidPhattTests RabidPhatt RabidPhattLv2Compare
 
       # Through xvfb-run, because panel-opens needs an X server.
       - name: Test
@@ -166,7 +168,7 @@ jobs:
       - name: Install the build's packages
         run: |
           bash external/hadronychecore/tools/linux/install-build-packages.sh
-          apt-get install -y g++ python3-pip xauth
+          apt-get install -y g++ python3-pip xauth lv2-dev
           pip3 install "cmake==3.31.*"
 
       - name: Configure
@@ -174,13 +176,19 @@ jobs:
 
       # This also runs the Steinberg validator, and a failure fails the build.
       - name: Build
-        run: cmake --build build --target RabidPhattTests RabidPhatt
+        run: cmake --build build --target RabidPhattTests RabidPhatt RabidPhattLv2Compare
 
       - name: Build the tarball
         run: bash external/hadronychecore/tools/linux/make-tarball.sh RabidPhatt "$(sed -n 's/^project(RabidPhatt VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)" build/installer
 
       - name: Test the tarball
-        run: xvfb-run -a bash external/hadronychecore/tools/linux/test-tarball.sh RabidPhatt build/installer/*.tar.gz build/bin/Release/validator build/bin/Release/RabidPhattTests 2.35
+        run: xvfb-run -a bash external/hadronychecore/tools/linux/test-tarball.sh RabidPhatt build/installer/*-x86_64.tar.gz build/bin/Release/validator build/bin/Release/RabidPhattTests 2.35
+
+      - name: Build the LV2 tarball
+        run: bash installer/make-lv2-tarball.sh "$(sed -n 's/^project(RabidPhatt VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)" build/installer
+
+      - name: Test the LV2 tarball
+        run: bash installer/test-lv2-tarball.sh build/installer/*-LV2.tar.gz build/installer/*-x86_64.tar.gz build/bin/Release/RabidPhattLv2Compare 2.35
 
       - name: Keep the tarball
         uses: actions/upload-artifact@v7
@@ -197,7 +205,9 @@ jobs:
           path: |
             build/bin/Release/validator
             build/bin/Release/RabidPhattTests
+            build/bin/Release/RabidPhattLv2Compare
             external/hadronychecore/tools/linux/test-tarball.sh
+            installer/test-lv2-tarball.sh
           if-no-files-found: error
           retention-days: 1
 
@@ -234,7 +244,8 @@ jobs:
       - name: Test the tarball
         run: |
           chmod +x tools/build/bin/Release/*
-          xvfb-run -a bash tools/external/hadronychecore/tools/linux/test-tarball.sh RabidPhatt installer/*.tar.gz tools/build/bin/Release/validator tools/build/bin/Release/RabidPhattTests 2.35
+          xvfb-run -a bash tools/external/hadronychecore/tools/linux/test-tarball.sh RabidPhatt installer/*-x86_64.tar.gz tools/build/bin/Release/validator tools/build/bin/Release/RabidPhattTests 2.35
+          bash tools/installer/test-lv2-tarball.sh installer/*-LV2.tar.gz installer/*-x86_64.tar.gz tools/build/bin/Release/RabidPhattLv2Compare 2.35
 
   # Runs for a version tag, once every build and installer has passed.
   release:

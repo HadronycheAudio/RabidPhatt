@@ -196,13 +196,20 @@ Rules for releases:
 - **`external/hadronychecore/tools/linux/install-build-packages.sh` installs the build's packages.** gtkmm and SQLite are only needed to configure, and the plug-in doesn't link them.
 - **`panel-opens` needs an X server,** so run `xvfb-run -a ctest ...` where there's no display. It opens and closes the real editor, and nothing more: `panel`, which drives it, only exists on Windows, so the panel's look and its controls need checking by eye.
 - **The release is built in an `ubuntu:22.04` container on CI, not on the runner,** because a binary only loads on a glibc as new as the one it's built against. HadronycheCore's `tools/linux/test-tarball.sh` checks this, and CI runs the tarball on other distributions too.
-- **There's no LV2 version yet.** Linux releases are VST 3 only.
+- **The LV2 is a thin wrapper around the VST3's own classes,** in `src/lv2/Lv2Entry.cpp`, with audio, control ports and MIDI, and no panel, state or transport yet. It lives here until the other plug-ins need it, when it moves to HadronycheCore.
+- **Never change the LV2's URI, or a port's index or symbol, in `src/lv2/RabidPhatt.ttl`.** They've been released, and hosts use them to find the plug-in and its values in saved projects. Controls follow `ParamId`, in order, so a new parameter adds a port at the end, and `tests/lv2/Lv2Compare.cpp` assumes this numbering.
+- **`lv2:minorVersion` isn't the plug-in's version.** LV2 treats an odd minor version as a development build, so it stays even.
+- **The LV2 passes `ModuleEntry` no handle, on purpose.** VSTGUI removes three levels from the binary's path, assuming a `.vst3` bundle, and crashes on a shallow one such as `/opt/RabidPhatt.lv2/RabidPhatt.so`. `lv2-shallow-path` guards this. A panel for the LV2 has to be checked against it.
+- **`lv2-matches-vst3` compares the LV2's output with the VST3's, bit for bit.** Control ports are floats, so the VST3 side gets the same rounded value. It also fails if `run ()` allocates. Don't loosen it: a difference there is a bug in the wrapper. It needs `lv2-dev`, which CI installs on top of HadronycheCore's package list.
+- **Don't compare REAPER's renders of the two formats bit for bit.** REAPER's VST3 render replaces extremely quiet tails with silence and its LV2 render doesn't. Rendering at a rate other than the project's adds a resampler as well.
+- **`installer/make-lv2-tarball.sh` and `test-lv2-tarball.sh` build and test the LV2 download,** separately from the VST3's, and `lv2-dev` provides the LV2 licence that it ships.
 
 ## Known limits
 
 - It has only been used on Windows, and Cubase is the only host it's been used in.
 - There's no limiter. Peaks measured just under full scale with the filter open, but they depend on how the rows' phases line up, and high resonance can go over.
 - The installer isn't code-signed, so Windows warns users when they run it. The macOS one isn't signed by Apple or notarized, so macOS refuses it until the user allows it.
-- The Linux version has only been tried briefly, in REAPER on Debian 13, by the owner.
+- The Linux VST 3 has only been tried briefly, in REAPER on Debian 13, by the owner. Nobody has listened to the LV2: it has only been played in `jalv` and rendered in REAPER, by script.
+- The LV2 has no panel and no state of its own, and LFO sync runs at a fixed 120 BPM because it gets no transport.
 - The test that opens the panel crashed once on CI as the test program exited, after all its checks had passed. It happened once in about 33 runs, and about 260 further runs didn't reproduce it. The cause isn't known, and it hasn't been seen in a host.
 - The Mac version hasn't been used in a real host on a real Mac. The tests measure its output, and Apple's `auval` validates it, on CI only.

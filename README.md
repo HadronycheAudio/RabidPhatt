@@ -25,7 +25,7 @@ It needs a few common libraries, which you probably have. On Debian or Ubuntu:
 sudo apt install libxcb-cursor0 libxcb-util1 libxkbcommon-x11-0 libcairo2 libpango-1.0-0 libpangocairo-1.0-0
 ```
 
-There's no LV2 version yet. See [Linux: lightly tested](#linux-lightly-tested) first.
+There's also an early LV2 version, in `RabidPhatt-<version>-Linux-x86_64-LV2.tar.gz`. It has no panel, so your host shows its own controls, and LFO sync doesn't follow the host's tempo. Extract it into `~/.lv2`. See [Linux: lightly tested](#linux-lightly-tested) first.
 
 ## macOS: untested
 
@@ -68,6 +68,8 @@ cmake --build build/Release --target RabidPhatt
 ```
 
 This produces `build/Release/VST3/Release/RabidPhatt.vst3`, and runs the Steinberg validator on the plug-in. To use it, copy it to `~/.vst3`.
+
+To build the LV2 too, install `lv2-dev`, and build the target `RabidPhatt-lv2`. This produces `build/Release/LV2/RabidPhatt.lv2`, and to use it, copy it to `~/.lv2`. The tests that compare it with the VST 3 also need the target `RabidPhattLv2Compare`.
 
 To run the tests, which include one that opens the panel and so needs a display or `xvfb-run`:
 
@@ -156,7 +158,7 @@ Copy-Item -Recurse -Force build/VST3/Release/RabidPhatt.vst3 "C:\Program Files\C
 
 ## Contributing
 
-RabidPhatt is free software that follows its author's own workflow, and there's no company or support promise behind it. If you find it handy and want it to work better with your host, your distribution or your way of working, you're welcome to take it further. Please [open an issue](https://github.com/HadronycheAudio/RabidPhatt/issues/new) or a pull request. An LV2 version is on the way, and help testing in other hosts is especially useful. `AGENTS.md` lists the rules that keep people's saved projects safe, so please read it before changing anything.
+RabidPhatt is free software that follows its author's own workflow, and there's no company or support promise behind it. If you find it handy and want it to work better with your host, your distribution or your way of working, you're welcome to take it further. Please [open an issue](https://github.com/HadronycheAudio/RabidPhatt/issues/new) or a pull request. The LV2 version is still growing, and help testing in other hosts is especially useful. `AGENTS.md` lists the rules that keep people's saved projects safe, so please read it before changing anything.
 
 ## Licence
 

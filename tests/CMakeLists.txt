@@ -29,3 +29,23 @@ set(RABIDPHATT_TESTS
 )
 
 hadronyche_add_host_tests(RabidPhattTests RabidPhatt ${RABIDPHATT_TESTS})
+
+# Plays the same things through the VST3 and the LV2, and compares them bit for bit.
+if(LINUX)
+    add_executable(RabidPhattLv2Compare
+        lv2/Lv2Compare.cpp
+        "${VST3_SDK_DIR}/pluginterfaces/base/funknown.cpp"
+        "${VST3_SDK_DIR}/pluginterfaces/base/coreiids.cpp"
+    )
+    target_include_directories(RabidPhattLv2Compare PRIVATE "${VST3_SDK_DIR}")
+    target_link_libraries(RabidPhattLv2Compare PRIVATE ${CMAKE_DL_LIBS})
+    set_target_properties(RabidPhattLv2Compare PROPERTIES ENABLE_EXPORTS ON)
+    add_dependencies(RabidPhattLv2Compare RabidPhatt RabidPhatt-lv2)
+    add_test(NAME lv2-matches-vst3 COMMAND RabidPhattLv2Compare "$<TARGET_FILE:RabidPhatt>" "$<TARGET_FILE:RabidPhatt-lv2>")
+    set_tests_properties(lv2-matches-vst3 PROPERTIES TIMEOUT 600)
+
+    # A bundle right under /tmp is as shallow as a path can get. VSTGUI crashed on those: see enterModule in the wrapper.
+    add_test(NAME lv2-shallow-path COMMAND sh -c
+        "d=$(mktemp -d /tmp/rp-lv2-XXXXXX) && cp \"$2\" \"$d/\" && \"$0\" \"$1\" \"$d/RabidPhatt.so\" note-edges; s=$?; rm -rf \"$d\"; exit $s"
+        "$<TARGET_FILE:RabidPhattLv2Compare>" "$<TARGET_FILE:RabidPhatt>" "$<TARGET_FILE:RabidPhatt-lv2>")
+endif()
