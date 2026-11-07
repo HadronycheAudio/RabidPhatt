@@ -36,31 +36,13 @@ hadronyche_add_plugin(RabidPhatt AU_TYPE aumu AU_SUBTYPE RbPh SOURCES
 )
 
 # --- LV2 ----------------------------------------------------------------------
-# The same sources as the VST3, plus an LV2 entry point. Only on Linux, so nothing changes elsewhere.
-if(LINUX)
-    set(RABIDPHATT_LV2_BUNDLE "${CMAKE_BINARY_DIR}/LV2/RabidPhatt.lv2")
-
-    add_library(RabidPhatt-lv2 MODULE
-        src/lv2/Lv2Entry.cpp
-        src/PluginEntry.cpp
-        src/Parameters.cpp
-        src/Processor.cpp
-        src/Controller.cpp
-        src/Editor.cpp
-    )
-    smtg_target_add_library_main(RabidPhatt-lv2)
-    target_include_directories(RabidPhatt-lv2 PRIVATE src)
-    target_compile_definitions(RabidPhatt-lv2 PRIVATE RABIDPHATT_VERSION="${PROJECT_VERSION}")
-    target_link_libraries(RabidPhatt-lv2 PRIVATE sdk vstgui_support hadronyche_dsp hadronyche_vst hadronyche_gui ${CMAKE_DL_LIBS})
-    target_link_options(RabidPhatt-lv2 PRIVATE "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/src/lv2/lv2-exports.map" "$<$<CONFIG:Release>:-s>")
-    set_target_properties(RabidPhatt-lv2 PROPERTIES
-        OUTPUT_NAME RabidPhatt
-        PREFIX ""
-        LIBRARY_OUTPUT_DIRECTORY "${RABIDPHATT_LV2_BUNDLE}"
-    )
-    configure_file(src/lv2/manifest.ttl "${RABIDPHATT_LV2_BUNDLE}/manifest.ttl" COPYONLY)
-    configure_file(src/lv2/RabidPhatt.ttl "${RABIDPHATT_LV2_BUNDLE}/RabidPhatt.ttl" COPYONLY)
-endif()
+hadronyche_add_lv2(RabidPhatt SOURCES
+    src/PluginEntry.cpp
+    src/Parameters.cpp
+    src/Processor.cpp
+    src/Controller.cpp
+    src/Editor.cpp
+)
 
 # --- Tests --------------------------------------------------------------------
 enable_testing()
