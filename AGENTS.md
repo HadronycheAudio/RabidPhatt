@@ -196,7 +196,7 @@ Rules for releases:
 - **`external/hadronychecore/tools/linux/install-build-packages.sh` installs the build's packages.** gtkmm and SQLite are only needed to configure, and the plug-in doesn't link them.
 - **`panel-opens` needs an X server,** so run `xvfb-run -a ctest ...` where there's no display. It opens and closes the real editor, and nothing more: `panel`, which drives it, only exists on Windows, so the panel's look and its controls need checking by eye.
 - **The release is built in an `ubuntu:22.04` container on CI, not on the runner,** because a binary only loads on a glibc as new as the one it's built against. HadronycheCore's `tools/linux/test-tarball.sh` checks this, and CI runs the tarball on other distributions too.
-- **The LV2 is HadronycheCore's wrapper around the VST3's own classes.** Its `AGENTS.md` has the rules. It has audio, MIDI, control ports, state, latency, transport and the VST3's panel, and the panel isn't in a release yet.
+- **The LV2 is HadronycheCore's wrapper around the VST3's own classes.** Its `AGENTS.md` has the rules. It has audio, MIDI, control ports, state, latency, transport and the VST3's panel.
 - **Never change the URI or a symbol in `src/lv2/PluginInfo.cpp`.** They've been released, and hosts use them to find the plug-in and its values in saved projects. A new parameter adds a symbol at the end.
 
 ## Known limits
@@ -204,7 +204,6 @@ Rules for releases:
 - It has only been used on Windows, and Cubase is the only host it's been used in.
 - There's no limiter. Peaks measured just under full scale with the filter open, but they depend on how the rows' phases line up, and high resonance can go over.
 - The installer isn't code-signed, so Windows warns users when they run it. The macOS one isn't signed by Apple or notarized, so macOS refuses it until the user allows it.
-- The Linux VST 3 has only been tried briefly, in REAPER on Debian 13, by the owner. Nobody has listened to the LV2: it has only been played in `jalv` and rendered in REAPER, by script.
-- The LV2's panel has only been tried in REAPER on Debian 13, by the owner, and in `jalv`.
-- The test that opens the panel crashed on CI as the test program finished, after all its checks had passed. It has happened twice in several hundred CI runs, and about 260 runs on a local machine didn't reproduce it. The cause isn't known, and it hasn't been seen in a host.
+- The Linux VST 3 and the LV2 have only been tried briefly, in REAPER on Debian 13, by the owner. The LV2 has also been played in `jalv`, by script.
+- The test that opens the panel used to crash rarely on CI, as the test program unloaded the plug-in. Pango's font thread was still running in it. Plug-ins now link with `-z nodelete`, as HadronycheCore's `AGENTS.md` explains, which removes that cause. The crash was too rare for reruns to prove it gone.
 - The Mac version hasn't been used in a real host on a real Mac. The tests measure its output, and Apple's `auval` validates it, on CI only.
