@@ -25,7 +25,7 @@ It needs a few common libraries, which you probably have. On Debian or Ubuntu:
 sudo apt install libxcb-cursor0 libxcb-util1 libxkbcommon-x11-0 libcairo2 libpango-1.0-0 libpangocairo-1.0-0
 ```
 
-There's also an early LV2 version, in `RabidPhatt-<version>-Linux-x86_64-LV2.tar.gz`. It has no panel, so your host shows its own controls, and LFO sync doesn't follow the host's tempo. Extract it into `~/.lv2`. See [Linux: lightly tested](#linux-lightly-tested) first.
+There's also an early LV2 version, in `RabidPhatt-<version>-Linux-x86_64-LV2.tar.gz`. It has no panel, so your host shows its own controls. Extract it into `~/.lv2`. See [Linux: lightly tested](#linux-lightly-tested) first.
 
 ## macOS: untested
 

@@ -131,9 +131,7 @@ jobs:
           submodules: recursive
 
       - name: Install the build's packages
-        run: |
-          bash external/hadronychecore/tools/linux/install-build-packages.sh
-          sudo apt-get install -y lv2-dev
+        run: bash external/hadronychecore/tools/linux/install-build-packages.sh
 
       # One folder per configuration, because the SDK's Linux output paths assume a single-configuration build.
       - name: Configure
@@ -143,9 +141,23 @@ jobs:
       - name: Build
         run: cmake --build build --target RabidPhattTests RabidPhatt RabidPhattLv2Compare
 
-      # Through xvfb-run, because panel-opens needs an X server.
+      # Through xvfb-run, because panel-opens needs an X server. Core dumps are on because that test has crashed twice as it
+      # finished, on CI only, and nothing else has shown where.
       - name: Test
-        run: xvfb-run -a ctest --test-dir build --output-on-failure -j 4
+        run: |
+          ulimit -c unlimited
+          sudo sysctl -w kernel.core_pattern="$PWD/core.%e.%p"
+          xvfb-run -a ctest --test-dir build --output-on-failure -j 4
+
+      - name: Show where a crash happened
+        if: failure()
+        run: |
+          sudo apt-get install -y gdb
+          for core in core.*; do
+            if [ -e "$core" ]; then
+              gdb -q -batch -ex 'thread apply all bt' build/bin/${{ matrix.config }}/RabidPhattTests "$core"
+            fi
+          done
 
   # The download. Built on the oldest distribution it's for, because a binary needs a glibc as new as the one it's built
   # against. That distribution's own CMake is too old.
@@ -168,7 +180,7 @@ jobs:
       - name: Install the build's packages
         run: |
           bash external/hadronychecore/tools/linux/install-build-packages.sh
-          apt-get install -y g++ python3-pip xauth lv2-dev
+          apt-get install -y g++ python3-pip xauth
           pip3 install "cmake==3.31.*"
 
       - name: Configure
@@ -185,10 +197,10 @@ jobs:
         run: xvfb-run -a bash external/hadronychecore/tools/linux/test-tarball.sh RabidPhatt build/installer/*-x86_64.tar.gz build/bin/Release/validator build/bin/Release/RabidPhattTests 2.35
 
       - name: Build the LV2 tarball
-        run: bash installer/make-lv2-tarball.sh "$(sed -n 's/^project(RabidPhatt VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)" build/installer
+        run: bash external/hadronychecore/tools/linux/make-lv2-tarball.sh RabidPhatt "$(sed -n 's/^project(RabidPhatt VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)" build/installer
 
       - name: Test the LV2 tarball
-        run: bash installer/test-lv2-tarball.sh build/installer/*-LV2.tar.gz build/installer/*-x86_64.tar.gz build/bin/Release/RabidPhattLv2Compare 2.35
+        run: bash external/hadronychecore/tools/linux/test-lv2-tarball.sh RabidPhatt build/installer/*-LV2.tar.gz build/installer/*-x86_64.tar.gz build/bin/Release/RabidPhattLv2Compare 2.35
 
       - name: Keep the tarball
         uses: actions/upload-artifact@v7
@@ -207,7 +219,7 @@ jobs:
             build/bin/Release/RabidPhattTests
             build/bin/Release/RabidPhattLv2Compare
             external/hadronychecore/tools/linux/test-tarball.sh
-            installer/test-lv2-tarball.sh
+            external/hadronychecore/tools/linux/test-lv2-tarball.sh
           if-no-files-found: error
           retention-days: 1
 
@@ -245,7 +257,7 @@ jobs:
         run: |
           chmod +x tools/build/bin/Release/*
           xvfb-run -a bash tools/external/hadronychecore/tools/linux/test-tarball.sh RabidPhatt installer/*-x86_64.tar.gz tools/build/bin/Release/validator tools/build/bin/Release/RabidPhattTests 2.35
-          bash tools/installer/test-lv2-tarball.sh installer/*-LV2.tar.gz installer/*-x86_64.tar.gz tools/build/bin/Release/RabidPhattLv2Compare 2.35
+          bash tools/external/hadronychecore/tools/linux/test-lv2-tarball.sh RabidPhatt installer/*-LV2.tar.gz installer/*-x86_64.tar.gz tools/build/bin/Release/RabidPhattLv2Compare 2.35
 
   # Runs for a version tag, once every build and installer has passed.
   release:
