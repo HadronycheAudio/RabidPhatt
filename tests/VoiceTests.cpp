@@ -3,9 +3,6 @@
 #include "Harness.h"
 #include "Tests.h"
 
-#include "pluginterfaces/base/ustring.h"
-#include "public.sdk/source/common/memorystream.h"
-
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -443,16 +440,8 @@ void testParameterState ()
     first.renderSamples (kBlockSize);
     const auto saved = first.getStateBytes ();
 
-    MemoryStream stream;
-    int32 written = 0;
-    stream.write (const_cast<char*> (saved.data ()), static_cast<int32> (saved.size ()), &written);
-
     Plug second;
-    int64 position = 0;
-    stream.seek (0, IBStream::kIBSeekSet, &position);
-    check ("the processor accepts it", second.component->setState (&stream) == kResultOk);
-    stream.seek (0, IBStream::kIBSeekSet, &position);
-    check ("the controller accepts it", second.controller->setComponentState (&stream) == kResultOk);
+    check ("the processor and the controller accept it", second.setStateBytes (saved));
 
     check ("Motion came back", std::abs (second.controller->getParamNormalized (kMotion) - first.controller->getParamNormalized (kMotion)) < 1e-9);
     check ("Glide came back", std::abs (second.controller->getParamNormalized (kGlide) - first.controller->getParamNormalized (kGlide)) < 1e-9);
@@ -462,13 +451,7 @@ void testParameterState ()
 void testParameterText ()
 {
     Plug plug;
-    const auto text = [&] (ParamId id, double normalized) {
-        Vst::String128 string {};
-        plug.controller->getParamStringByValue (id, normalized, string);
-        char ascii[128] {};
-        UString (string, str16BufferSize (Vst::String128)).toAscii (ascii, sizeof (ascii));
-        return std::string (ascii);
-    };
+    const auto text = [&] (ParamId id, double normalized) { return paramText (plug.controller, id, normalized); };
 
     check ("Motion reads in its own units", text (kMotion, 0.0) == "0.0010" && text (kMotion, 1.0) == "1.0000");
     check ("the bottom of Volume reads -inf", text (kVolume, 0.0) == "-inf");
@@ -486,10 +469,8 @@ void testParameterText ()
     for (Vst::ParamID id = 0; id < kParamCount; ++id)
     {
         const double normalized = 0.37;
-        Vst::String128 string {};
-        plug.controller->getParamStringByValue (id, normalized, string);
-        Vst::ParamValue parsed = -1.0;
-        roundTrips = roundTrips && plug.controller->getParamValueByString (id, string, parsed) == kResultOk
+        double parsed = -1.0;
+        roundTrips = roundTrips && paramFromText (plug.controller, id, text (static_cast<ParamId> (id), normalized).c_str (), parsed)
                      && text (static_cast<ParamId> (id), parsed) == text (static_cast<ParamId> (id), normalized);
     }
     check ("every parameter's text converts back", roundTrips);

@@ -2,16 +2,13 @@
 
 #include "Controller.h"
 
-#include "hadronyche/dsp/Denormals.h"
 #include "hadronyche/dsp/Gain.h"
 
 #include "pluginterfaces/vst/ivstevents.h"
-#include "pluginterfaces/vst/ivstparameterchanges.h"
 #include "pluginterfaces/vst/ivstprocesscontext.h"
 
 #include <algorithm>
 #include <cmath>
-#include <cstring>
 
 using namespace Steinberg;
 
@@ -32,47 +29,22 @@ constexpr double kGlideTimeConstants = 3.0;
 
 } // namespace
 
-Processor::Processor () : _params (getParamSpec)
+Processor::Processor ()
+: StereoProcessor (Controller::getClassFUID (), false, getParamSpec, readParamState, writeParamState)
 {
-    setControllerClass (Controller::getClassFUID ());
     processContextRequirements.needTransportState ().needProjectTimeMusic ().needTempo ();
 }
 
 tresult PLUGIN_API Processor::initialize (FUnknown* context)
 {
-    const tresult result = AudioEffect::initialize (context);
+    const tresult result = StereoProcessor::initialize (context);
     if (result != kResultOk)
         return result;
 
-    addAudioOutput (STR16 ("Stereo Out"), Vst::SpeakerArr::kStereo);
     addEventInput (STR16 ("MIDI In"), 16); // Notes are taken from every channel.
     return kResultOk;
 }
 
-tresult PLUGIN_API Processor::setActive (TBool state)
-{
-    if (state)
-        prepareDsp ();
-
-    return AudioEffect::setActive (state);
-}
-
-tresult PLUGIN_API Processor::setBusArrangements (Vst::SpeakerArrangement* inputs, int32 numIns,
-                                                  Vst::SpeakerArrangement* outputs, int32 numOuts)
-{
-    if (numIns == 0 && numOuts == 1 && outputs[0] == Vst::SpeakerArr::kStereo)
-        return AudioEffect::setBusArrangements (inputs, numIns, outputs, numOuts);
-
-    return kResultFalse;
-}
-
-tresult PLUGIN_API Processor::canProcessSampleSize (int32 symbolicSampleSize)
-{
-    return symbolicSampleSize == Vst::kSample32 ? kResultTrue : kResultFalse;
-}
-
-// Releases can be long and there's no input to tell the host when they end, so the host shouldn't cut
-// the plug-in off. The silence flags tell it when there's nothing to hear.
 uint32 PLUGIN_API Processor::getTailSamples ()
 {
     return Vst::kInfiniteTail;
@@ -286,22 +258,8 @@ void Processor::updateSleep ()
     _blockPeak = 0.0f;
 }
 
-tresult PLUGIN_API Processor::process (Vst::ProcessData& data)
+void Processor::renderBlock (Vst::ProcessData& data, Vst::AudioBusBuffers& output)
 {
-    _params.readChanges (data.inputParameterChanges);
-
-    if (data.numOutputs == 0 || data.numSamples == 0)
-        return kResultOk;
-
-    auto& output = data.outputs[0];
-    if (output.numChannels != 2)
-    {
-        for (int32 c = 0; c < output.numChannels; ++c)
-            std::memset (output.channelBuffers32[c], 0, sizeof (float) * static_cast<size_t> (data.numSamples));
-        return kResultOk;
-    }
-
-    const Hadronyche::FlushDenormals flushDenormals;
     applyParameters ();
     updateLfoTiming (data.processContext);
 
@@ -339,24 +297,6 @@ tresult PLUGIN_API Processor::process (Vst::ProcessData& data)
     updateSleep ();
 
     output.silenceFlags = startedAsleep && _isAsleep ? 3 : 0;
-    return kResultOk;
-}
-
-tresult PLUGIN_API Processor::setState (IBStream* state)
-{
-    if (!state)
-        return kResultFalse;
-
-    const bool ok = readParamState (state, [this] (Vst::ParamID id, double value) { _params[id] = value; });
-    return ok ? kResultOk : kResultFalse;
-}
-
-tresult PLUGIN_API Processor::getState (IBStream* state)
-{
-    if (!state)
-        return kResultFalse;
-
-    return writeParamState (state, _params.snapshot ()) ? kResultOk : kResultFalse;
 }
 
 } // namespace RabidPhatt
