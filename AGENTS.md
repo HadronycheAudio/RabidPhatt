@@ -6,7 +6,9 @@ RabidPhatt is a monophonic VST® 3 synthesizer for Windows, with 66 sawtooth osc
 
 `docs/signal-path.md` is the behaviour specification. `README.md` covers building and usage.
 
-Code shared with the other Hadronyche plug-ins is in the `HadronycheCore` submodule, at `external/hadronychecore`: the parameters' curves and saved format, the processor and controller base classes, the module entry, `PanelEditor`, `Smoother`, the test host, the build setup and CI. Its `AGENTS.md` has its own rules.
+Code shared with the other Hadronyche plug-ins is in the `HadronycheCore` submodule, at `external/hadronychecore`: the parameters' curves and saved format, the frame that the Rust side fits into on both sides of the boundary, the module entry, `PanelEditor`, `Smoother`, the state-variable filter kernel, the test host, the build setup and CI. Its `AGENTS.md` has its own rules.
+
+The voice and the parameter table are Rust, in `rust/`. The crate implements HadronycheCore's `Processor` trait, and depends on its `rust/hadronyche-plugin` and `rust/hadronyche-dsp` through the submodule. `hadronyche_add_rust` in `CMakeLists.txt` builds it into the plug-in, and the C++ in `src/` is the VST3 classes around it, on `RustProcessor` and `RustController`. Rust from [rustup](https://rustup.rs) is a build requirement on every system.
 
 ## Commands
 
@@ -42,7 +44,7 @@ ctest --test-dir build -C Release -N
 Copy-Item -Recurse -Force build/VST3/Release/RabidPhatt.vst3 "C:\Program Files\Common Files\VST3\"
 ```
 
-There's no linter or formatter.
+There's no linter or formatter for the C++. In `rust/`, `cargo fmt` formats, and `cargo clippy --all-targets -- -D warnings` and `cargo test` have to pass. One of those tests checks that `src/ParamIds.h` is what the parameter table generates, and `HADRONYCHE_UPDATE_HEADERS=1 cargo test` rewrites it.
 
 Follow the existing style, which comes from the SDK: a space before call parentheses (`foo (x)`), `_member` for private members, `kName` for constants, and comments that explain why rather than what.
 
@@ -54,24 +56,26 @@ People use this plug-in in real projects. Breaking these rules damages saved pro
 
 - **Never change the Audio Unit codes,** `aumu` `RbPh` here and the manufacturer `Hdrn` in HadronycheCore. Hosts use them to find the plug-in in saved projects.
 - **Never change the class IDs in `src/PluginConfig.h`.** Hosts use them to find the plug-in in saved projects.
-- **Never renumber, reorder or remove entries in `ParamId`** (`src/Parameters.h`). Their values are saved in projects and automation. Add new parameters just before `kParamCount`, and add the matching row to `kSpecs` in `src/Parameters.cpp`, which is listed in the same order.
+- **Never reorder or remove an entry in `Param`** (`rust/src/lib.rs`). Their positions are saved in projects and automation, and `src/ParamIds.h` is generated from them. Add a new parameter at the end, with its spec on the same line.
 - **Don't change the range or curve of an existing parameter.** Hosts store values normalized to 0..1, so this silently changes what saved projects sound like. If it's unavoidable, migrate old values and bump the state version.
-- **Only ever add to the end of `kLfoDivisions`,** and keep `kLfoDivisionQuarters` in step with it. Projects save a position in the list.
-- **Changing the saved format requires bumping `kStateVersion` and still reading every older version.** The format is `int32` version, `int32` count, then `int32` ID and `double` normalized value pairs (`writeParamState`). A state without a parameter leaves it at its default, and an unknown one is skipped.
+- **Only ever add to the end of `LFO_DIVISIONS`,** and keep `LFO_DIVISION_QUARTERS` in step with it. Projects save a position in the list.
+- **Changing the saved format requires bumping `STATE_VERSION` and converting every older version in `migrate_param`.** The format is HadronycheCore's `ParamState.h`: `int32` version, `int32` count, then `int32` ID and `double` normalized value pairs. A state without a parameter leaves it at its default, and an unknown one is skipped.
 - **Don't change the oscillators' start phases or their seeds without a good reason.** The same notes render the same way every time, and people will rely on that.
+- **The Rust port is bit for bit what the C++ was,** which HadronycheCore's `tools/nulltest/` showed against the last C++ build, so a change in the sound is a change, not rounding. Keep the arithmetic in the order it's written: Rust never contracts `a * b + c` into one rounding, and neither did the C++ build, and `f32` and `f64` are kept where they were.
 - **Loading must tolerate missing or damaged data.**
 
 ### The audio thread
 
-`Processor::process` and everything it calls runs on the audio thread, including all of `src/dsp/`.
+`RabidPhatt::process` in `rust/src/lib.rs`, and everything it calls, runs on the audio thread. `prepare` doesn't.
 
-- **No allocation, locks, file access, system calls or anything else that can block.** This includes `std::vector` growth, `std::string` and `std::function` copies. The failure is audio dropouts that may not show up in testing.
+- **No allocation, locks, file access, system calls or anything else that can block.** This includes a `Vec` growing. The failure is audio dropouts that may not show up in testing, though `lv2-matches-vst3` fails if a block allocates.
+- **A panic is a bug, even though HadronycheCore's boundary catches it.** After one, that instance of the plug-in stays silent for good, which is what a user would notice.
 
 ### Sound and timing
 
-- **There's no latency, and `getLatencySamples` stays at the base class's 0.** This is an instrument, so anything that adds latency, such as oversampling, makes it worse to play.
-- **The oscillators' anti-aliasing must stay in step with their fade.** `Hadronyche::stepCorrection` reaches 2 samples each side of a wrap, which only works up to a quarter of the sample rate. That's why oscillators fade out by there.
-- **`Hadronyche::Smoother` must stay double precision.** In single precision it stalls just short of its target, which would leave a held note out of tune after a glide.
+- **There's no latency, and `latency` stays at the trait's 0.** This is an instrument, so anything that adds latency, such as oversampling, makes it worse to play.
+- **The oscillators' anti-aliasing must stay in step with their fade.** `hadronyche_dsp::step_correction` reaches 2 samples each side of a wrap, which only works up to a quarter of the sample rate. That's why oscillators fade out by there.
+- **`Smoother` must stay double precision, and `step_f32` is not `step`.** In single precision it stalls just short of its target, which would leave a held note out of tune after a glide.
 - **While the transport plays, a synced LFO's phase is calculated from the host's musical position.** Don't accumulate it instead, or it will drift off the grid.
 - **Motion's modulation isn't smoothed, and mustn't be.** A smoother slow enough to matter would eat the top of the LFO's range. `Motion` itself is smoothed before the LFO is added.
 
@@ -92,13 +96,14 @@ In `docs/signal-path.md`, **Requirement** marks the owner's decisions and **Prop
 
 - **Don't edit anything in `external/vst3sdk`.** It's a submodule pinned to `v3.8.1_build_84`. `git submodule status` shows a misleading `v3.7.3...` label for that same commit, so check with `git -C external/vst3sdk describe --tags`.
 - **Don't edit `external/hadronychecore` from here.** Change it in its own repository, and move the submodule here afterwards, once the new version has been compared with the old as its `AGENTS.md` describes.
+- **The Rust side builds from the submodule, even with `HADRONYCHE_CORE_DIR` set,** because Cargo can't redirect a path dependency. To work on both, point the submodule at the commit in the other checkout, and the configure stops when the two differ.
 - Don't change git configuration. Commit or push only when asked.
 
 ## Architecture
 
 ### Signal path
 
-`Processor::render` runs this for every sample:
+`RabidPhatt::render` in `rust/src/lib.rs` runs this for every sample:
 
 ```
 Note stack → Glide ─┬→ Left bank ──┐
@@ -110,15 +115,15 @@ Note stack → Glide ─┬→ Left bank ──┐
 
 | Thread | Runs | Talks to the others through |
 | --- | --- | --- |
-| Audio | `Processor::process` | Atomics only |
+| Audio | `RustProcessor::process`, and `RabidPhatt::process` in Rust | Atomics only |
 | UI | `Editor`, on a 33 ms timer | The controller's parameters |
 | Host | `setState`, `getState`, `setActive` | Atomics |
 
-The processor and controller share no memory, so the plug-in is marked as distributable. `getParamSpec` is the one definition of every parameter's range and text, shared by `Processor`, `Controller` and `Editor`. The last parameter value per block is used, followed by smoothing.
+The processor and controller share no memory, so the plug-in is marked as distributable. `PARAMS` in `rust/src/lib.rs` is the one definition of every parameter's range and text: the Rust side reads it directly, and `Controller`, `Editor` and `src/lv2/PluginInfo.cpp` read it through `Hadronyche::RustPlugin::getSpec`. The last parameter value per block is used, followed by smoothing.
 
 ### The voice
 
-- **Events** are handled on their exact sample, by rendering up to each one in `Processor::process`.
+- **Events** are handled on their exact sample, by rendering up to each one in `RabidPhatt::process`. They arrive as `Block::notes`, which HadronycheCore's `RustProcessor` fills from the host's event list, in the host's order.
 - **The gate** is high while any key is held, so legato moves the pitch and leaves the envelopes and LFO delay alone.
 - **Sleep:** once both envelopes are idle and the filter's tail has gone, the voice stops running and reports silence through the silence flags. The oscillators pause rather than run on, which is what makes renders repeatable. Smoothers snap to their targets at the start of a sleeping block, so that a parameter change arriving with a note doesn't ramp audibly.
 - **The oscillators** are band-limited with a 4-point polynomial correction around each wrap. Only the first row plays the note exactly.

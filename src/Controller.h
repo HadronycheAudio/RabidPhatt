@@ -2,16 +2,14 @@
 
 #include "PluginConfig.h"
 
-#include "hadronyche/vst/SpecController.h"
+#include "hadronyche/vst/RustController.h"
 
 namespace RabidPhatt {
 
-// The VST3 edit controller: its parameters and state come from Parameters.h, and it creates the editor.
-class Controller : public Hadronyche::SpecController
+// The VST3 edit controller: its parameters and state come from the Rust side, and it creates the editor.
+class Controller : public Hadronyche::RustController
 {
 public:
-    Controller ();
-
     static const Steinberg::FUID getClassFUID () { return Steinberg::FUID (RABIDPHATT_CONTROLLER_UID); }
     static Steinberg::FUnknown* createInstance (void*)
     {
