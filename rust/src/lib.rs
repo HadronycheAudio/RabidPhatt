@@ -358,16 +358,8 @@ impl Processor for RabidPhatt {
         }
     }
 
-    fn prepare(&mut self, sample_rate: f64, _max_block_size: usize) {
+    fn prepare(&mut self, sample_rate: f64, _max_block_size: usize, params: &Params<'_>) {
         self.sample_rate = sample_rate;
-
-        // The parameters' defaults, until the first block brings the host's values, which the voice, asleep, then
-        // snaps to.
-        let defaults: Vec<f64> = PARAMS
-            .iter()
-            .map(|spec| spec.plain_to_normalized(spec.default))
-            .collect();
-        let params = Params::new(&PARAMS, &defaults);
 
         for smoother in [
             &mut self.motion,
@@ -402,7 +394,7 @@ impl Processor for RabidPhatt {
         self.rendered_pitch = -1.0;
         self.is_asleep = true;
 
-        self.apply_parameters(&params);
+        self.apply_parameters(params);
     }
 
     fn process(&mut self, block: Block<'_>) -> Output {
@@ -451,7 +443,7 @@ impl Processor for RabidPhatt {
     }
 
     /// A note can come at any time, and the release after it ends with the silence flags.
-    fn tail(&self) -> Tail {
+    fn tail(&self, _sample_rate: f64) -> Tail {
         Tail::Infinite
     }
 }
