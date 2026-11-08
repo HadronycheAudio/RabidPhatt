@@ -10,7 +10,7 @@ mod oscillator_bank;
 
 use core::ffi::CStr;
 
-use hadronyche_dsp::{Smoother, VOLUME_SILENCE_DB, volume_to_gain};
+use hadronyche_dsp::{Smoother, VOLUME_SILENCE_DB, pow2, pow10, volume_to_gain};
 use hadronyche_plugin::{
     Block, Curve, NoteEvent, NoteKind, Output, ParamSpec, Params, Processor, TRANSPORT_TEMPO_VALID, Tail, Transport,
     export_plugin, params,
@@ -275,14 +275,14 @@ impl RabidPhatt {
             let pitch = self.pitch.step();
             if pitch != self.rendered_pitch {
                 self.rendered_pitch = pitch;
-                self.frequency = 440.0 * 2f64.powf((pitch - 69.0) / 12.0) / self.sample_rate;
+                self.frequency = 440.0 * pow2((pitch - 69.0) / 12.0) / self.sample_rate;
             }
 
             // In log10, where the LFO moves Motion like turning its knob, and clamped to the knob's range.
             let fade = self.lfo.step_fade();
             self.lfo_fade.set_target(fade);
             let modulation = self.lfo_amount.step() * self.lfo_fade.step() * self.lfo.step_sine();
-            let motion = 10f64.powf((self.motion.step() + modulation).clamp(-MOTION_RANGE_LOG10, 0.0));
+            let motion = pow10((self.motion.step() + modulation).clamp(-MOTION_RANGE_LOG10, 0.0));
             let is_amp_open = !self.amp_env.is_idle();
             let amp = self.amp_env.step() as f32;
 
@@ -296,7 +296,7 @@ impl RabidPhatt {
 
             let cutoff_octaves = self.cutoff_octaves.step() + self.env_amount.step() * self.filter_env.step();
             let resonance = self.resonance.step();
-            self.filter.set_coefficients(2f64.powf(cutoff_octaves), resonance);
+            self.filter.set_coefficients(pow2(cutoff_octaves), resonance);
             l = self.filter.process(l, 0);
             r = self.filter.process(r, 1);
 
