@@ -1,7 +1,9 @@
 #include "Editor.h"
 
 #include "Controller.h"
-#include "Parameters.h"
+#include "ParamIds.h"
+
+#include "hadronyche/vst/RustPlugin.h"
 
 #include "vstgui/vstgui.h"
 
@@ -29,7 +31,7 @@ const Hadronyche::PanelTheme kTheme {
 } // namespace
 
 Editor::Editor (Controller* controller)
-: PanelEditor (controller, kLayout.rowWidth ({ 2, 3, 4, 3, 4, 1 }), kLayout.rowHeight (), getParamSpec, kParamCount, kTheme, kLayout), _controller (controller)
+: PanelEditor (controller, kLayout.rowWidth ({ 2, 3, 4, 3, 4, 1 }), kLayout.rowHeight (), Hadronyche::RustPlugin::getSpec, kParamCount, kTheme, kLayout), _controller (controller)
 {
 }
 

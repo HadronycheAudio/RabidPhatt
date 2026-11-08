@@ -2,7 +2,7 @@
 
 // The test host from HadronycheCore, and what this plug-in's tests add to it.
 
-#include "Parameters.h"
+#include "ParamIds.h"
 
 #include "hadronyche/testhost/Host.h"
 

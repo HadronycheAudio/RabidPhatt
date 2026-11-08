@@ -34,7 +34,7 @@ There's also an LV2 version, in `RabidPhatt-<version>-Linux-x86_64-LV2.tar.gz`, 
 
 **Are you a Mac user who's ready to commit to testing? You're more than welcome!** Please [open an issue](https://github.com/HadronycheAudio/RabidPhatt/issues/new) saying which Mac, macOS version and host you use.
 
-To build it yourself, you need Xcode, CMake 3.25 or newer, and an internet connection the first time, which fetches Apple's AudioUnitSDK:
+To build it yourself, you need Xcode, CMake 3.25 or newer, [Rust](https://rustup.rs) with both Mac targets (`rustup target add aarch64-apple-darwin x86_64-apple-darwin`), and an internet connection the first time, which fetches Apple's AudioUnitSDK:
 
 ```bash
 git clone --recurse-submodules https://github.com/HadronycheAudio/RabidPhatt.git
@@ -57,7 +57,7 @@ ctest --test-dir build -C Release --output-on-failure
 > [!NOTE]
 > **The Linux version is new.** It passes the automated tests on Ubuntu 22.04 and 24.04 and Debian 12 and 13, and it has been tried briefly by hand in REAPER on Debian 13. Other hosts and distributions haven't been tried. Please [open an issue](https://github.com/HadronycheAudio/RabidPhatt/issues/new) saying which distribution and host you use if something goes wrong.
 
-To build it yourself, you need CMake 3.25 or newer, and the packages that this script installs on Debian or Ubuntu:
+To build it yourself, you need CMake 3.25 or newer, [Rust](https://rustup.rs), and the packages that this script installs on Debian or Ubuntu:
 
 ```bash
 git clone --recurse-submodules https://github.com/HadronycheAudio/RabidPhatt.git
@@ -99,6 +99,7 @@ xvfb-run -a ctest --test-dir build/Release --output-on-failure
 
 - Visual Studio 2022 with the "Desktop development with C++" workload
 - CMake 3.25 or newer
+- [Rust](https://rustup.rs), which builds the voice in `rust/` into the plug-in
 - Git
 
 ## Getting the code
@@ -147,11 +148,12 @@ Copy-Item -Recurse -Force build/VST3/Release/RabidPhatt.vst3 "C:\Program Files\C
 | --- | --- |
 | `src/PluginConfig.h` | Plug-in name, vendor details and class IDs |
 | `src/PluginEntry.cpp` | VST3 module entry, registers the classes below |
-| `src/Parameters.*` | Parameter IDs, ranges and text, plus saving and loading their values |
-| `src/Processor.*` | Handles notes and runs the voice |
+| `rust/src/lib.rs` | The parameters, with their IDs, ranges and text, and the processor that handles notes and runs the voice |
+| `rust/src/` | Also the oscillator banks, envelopes, LFO, filter and note stack |
+| `src/ParamIds.h` | The parameter IDs for the C++ side, generated from `rust/` |
+| `src/Processor.*` | The VST3 audio component, which HadronycheCore's `RustProcessor` runs on the Rust side |
 | `src/Controller.*` | Registers the parameters and creates the editor |
 | `src/Editor.*` | The plug-in window |
-| `src/dsp/` | Oscillator banks, envelopes, LFO, filter, note stack and parameter smoothing |
 | `tests/` | Tests that drive the built plug-in like a host |
 | `installer/` | The Windows installer. HadronycheCore's `tools/windows/` tests it, and its `tools/macos/` and `tools/linux/` build the macOS installer and the Linux tarballs |
 | `docs/` | The behaviour specification and the original design diagrams |

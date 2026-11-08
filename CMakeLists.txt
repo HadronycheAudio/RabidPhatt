@@ -17,22 +17,17 @@ include("${HADRONYCHE_CORE_DIR}/cmake/HadronychePlugin.cmake")
 hadronyche_use_vst3_sdk()
 
 # --- Plug-in ------------------------------------------------------------------
+hadronyche_add_rust(RabidPhatt)
 hadronyche_add_plugin(RabidPhatt AU_TYPE aumu AU_SUBTYPE RbPh SOURCES
     src/PluginConfig.h
     src/PluginEntry.cpp
-    src/Parameters.h
-    src/Parameters.cpp
+    src/ParamIds.h
     src/Processor.h
     src/Processor.cpp
     src/Controller.h
     src/Controller.cpp
     src/Editor.h
     src/Editor.cpp
-    src/dsp/Adsr.h
-    src/dsp/Lfo.h
-    src/dsp/LowPassFilter.h
-    src/dsp/NoteStack.h
-    src/dsp/OscillatorBank.h
 )
 
 # --- LV2 ----------------------------------------------------------------------
